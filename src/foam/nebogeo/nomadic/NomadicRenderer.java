@@ -52,23 +52,25 @@ class NomadicRenderer implements GLSurfaceView.Renderer {
         mAct=ctx;
         mCode=code;
     }
-    
-    public String loadExternal(String filename)
+
+    public String getCode() { return mCode; }
+
+    public void loadExternal(String filename)
     {
         String code=readRawTextFileExternal(mAct, filename);
         Log.i("fluxus","going to run (external)...");
         Log.i("fluxus",code);
         mCode=code;
-        return code;
+        evalCode(code);
     }
 
-    public String load(String filename)
+    public void load(String filename)
     {
         String code=readRawTextFile(mAct, filename);
         Log.i("fluxus","going to run...");
         Log.i("fluxus",code);
         mCode=code;
-        return code;
+        evalCode(code);
     }
 
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
@@ -89,6 +91,11 @@ class NomadicRenderer implements GLSurfaceView.Renderer {
         {
             nativeRender();
         }
+    }
+
+    public void evalCurrent() 
+    {
+        evalCode(mCode);
     }
 
     public void evalCode(String code) 

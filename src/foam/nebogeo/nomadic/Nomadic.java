@@ -1,4 +1,4 @@
-// Copyright (C) 2011 Dave Griffiths
+// Copyright (C) 2012 Dave Griffiths
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -46,7 +46,9 @@ public class Nomadic extends Activity {
 	private MenuItem menuabout = null;
 	private MenuItem menuexit = null;
 	private MenuItem menuload = null;
+	private MenuItem menuloadtex = null;
     private int DIALOG_LOAD = 1;
+    private int DIALOG_TEXLOAD = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -89,6 +91,8 @@ public class Nomadic extends Activity {
 		menuabout.setIcon(android.R.drawable.ic_menu_info_details); 
 		menuload = menu.add(0, Menu.FIRST + menu.size(), 0, "Load");
 		menuload.setIcon(android.R.drawable.ic_menu_info_details); 
+		menuloadtex = menu.add(0, Menu.FIRST + menu.size(), 0, "Load Texture");
+		menuloadtex.setIcon(android.R.drawable.ic_menu_info_details); 
 		menuexit = menu.add(0, Menu.FIRST + menu.size(), 0, "Exit");
 		menuexit.setIcon(android.R.drawable.ic_menu_close_clear_cancel); 
 		return super.onPrepareOptionsMenu(menu);
@@ -128,6 +132,9 @@ public class Nomadic extends Activity {
 		} else if (item == menuload) {
 			Intent it = new Intent(this, LoadDialog.class);
 			startActivityForResult(it, DIALOG_LOAD);            
+		} else if (item == menuloadtex) {
+			Intent it = new Intent(this, LoadDialog.class);
+			startActivityForResult(it, DIALOG_TEXLOAD);            
 		} else if (item == menuexit) {
 			finish();
 		} else {

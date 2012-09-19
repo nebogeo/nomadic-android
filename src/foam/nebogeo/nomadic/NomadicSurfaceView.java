@@ -49,13 +49,12 @@ class NomadicSurfaceView extends GLSurfaceView {
 
     NomadicRenderer mRenderer;
     Context mAct;
-    String mCode;
 
     public NomadicSurfaceView(Context context) {
         super(context);
         mAct = context;
-        mCode=mRenderer.readRawTextFile(mAct,"startup.scm");
-        mRenderer = new NomadicRenderer(context,mCode);
+        String code=mRenderer.readRawTextFile(mAct,"startup.scm");
+        mRenderer = new NomadicRenderer(context,code);
         setRenderer(mRenderer);
     }
 
@@ -111,11 +110,10 @@ class NomadicSurfaceView extends GLSurfaceView {
         alert.setMessage("f e e d   m e");
         final EditText input = new EditText(mAct);
         alert.setView(input);
-        input.setText(mCode);
+        input.setText(mRenderer.getCode());
         alert.setPositiveButton("eval", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
-                mCode = input.getText().toString();
-                mRenderer.evalCode(mCode);
+                mRenderer.evalCode(input.getText().toString());
             }
         });
         
@@ -148,8 +146,7 @@ class NomadicSurfaceView extends GLSurfaceView {
     public void loadCodeExternal(String filename)
     {
         Log.i("nomadic","loading "+filename);
-        mCode=mRenderer.loadExternal(filename);
-        mRenderer.evalCode(mCode);
+        mRenderer.loadExternal(filename);
     }
 
     private static native void nativePause();
