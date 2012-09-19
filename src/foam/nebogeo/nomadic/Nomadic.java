@@ -16,39 +16,42 @@
 
 package foam.nebogeo.nomadic;
 
-import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.opengles.GL10;
-
 import android.app.Activity;
 import android.content.Context;
-import android.opengl.GLSurfaceView;
 import android.os.Bundle;
-import android.view.MotionEvent;
 import android.view.KeyEvent;
 import android.app.AlertDialog;
-import android.widget.EditText;
-import android.content.DialogInterface;
-import android.graphics.BitmapFactory;
-import android.graphics.Bitmap;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.text.util.Linkify;
+import android.text.method.LinkMovementMethod;
+import android.text.SpannableString;
+import android.content.res.AssetManager;
+import android.text.Html;
+import android.widget.TextView;
+import android.content.Intent;
+
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.FileNotFoundException;
-import java.io.InputStream;
-import java.io.StringWriter;
-import java.io.File;
-import java.io.Writer;
-import java.io.Reader;
-import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.io.FileInputStream;
-import java.io.ByteArrayOutputStream;
-import java.nio.ByteBuffer;
+
+import foam.nebogeo.nomadic.LoadDialog;
+import foam.nebogeo.nomadic.NomadicSurfaceView;
+import foam.nebogeo.nomadic.NomadicRenderer;
 
 public class Nomadic extends Activity {
+
+	private MenuItem menuabout = null;
+	private MenuItem menuexit = null;
+	private MenuItem menuload = null;
+    private int DIALOG_LOAD = 1;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mGLView = new FluxusGLSurfaceView(this);
+        mGLView = new NomadicSurfaceView(this);
         setContentView(mGLView);
     }
 
@@ -70,239 +73,87 @@ public class Nomadic extends Activity {
         {        
             mGLView.doCode();            
         }
-        return true;
+        return super.onKeyDown(keyCode,event);
     }
 
-    private FluxusGLSurfaceView mGLView;
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		return true;
+	}
+	
+	// menu launch yeah
+	@Override
+	public boolean onPrepareOptionsMenu(Menu menu) {
+		menu.clear();
+		menuabout = menu.add(0, Menu.FIRST + menu.size(), 0, "About");
+		menuabout.setIcon(android.R.drawable.ic_menu_info_details); 
+		menuload = menu.add(0, Menu.FIRST + menu.size(), 0, "Load");
+		menuload.setIcon(android.R.drawable.ic_menu_info_details); 
+		menuexit = menu.add(0, Menu.FIRST + menu.size(), 0, "Exit");
+		menuexit.setIcon(android.R.drawable.ic_menu_close_clear_cancel); 
+		return super.onPrepareOptionsMenu(menu);
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		if (item == menuabout) {
+			// load in the about dialog contents from assets/about.html
+			StringBuffer sb = new StringBuffer();
+			try {
+				AssetManager assets = getAssets();
+				InputStreamReader reader = new InputStreamReader(assets.open("about.html"), "UTF-8");
+				BufferedReader br = new BufferedReader(reader);
+				String line = br.readLine();
+				while(line != null) {
+					sb.append(line + "\n");
+					line = br.readLine();
+				}
+			} catch (IOException e) {
+				sb.append("Copyright Dave Griffiths, 2012");
+			}
+			
+			// convert the string to HTML for the about dialog
+			final SpannableString s = new SpannableString(Html.fromHtml(sb.toString()));
+			Linkify.addLinks(s, Linkify.ALL);
+			
+			AlertDialog ab = new AlertDialog.Builder(this)
+			.setTitle("About")
+			.setIcon(android.R.drawable.ic_dialog_info)
+			.setMessage(s)
+			.setPositiveButton("ok", null)
+			.create();
+			ab.show();
+			// make the links clickable
+			((TextView)ab.findViewById(android.R.id.message)).setMovementMethod(LinkMovementMethod.getInstance());
+		} else if (item == menuload) {
+			Intent it = new Intent(this, LoadDialog.class);
+			startActivityForResult(it, DIALOG_LOAD);            
+		} else if (item == menuexit) {
+			finish();
+		} else {
+			// pass the menu selection through to the MenuBang manager
+//			MenuBang.hit(item);
+		}
+		return super.onOptionsItemSelected(item);
+	}
+
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data); 
+		if (resultCode == RESULT_OK) {
+            if (requestCode == DIALOG_LOAD) {
+                mGLView.loadCodeExternal(data.getStringExtra("filename"));
+            }
+		}
+	}
+
+    private NomadicSurfaceView mGLView;
 
     static {
         System.loadLibrary("nomadic");
     }
 }
 
-class FlxImage
-{
-    byte [] mData;
-    int mWidth;
-    int mHeight;
-}
 
-class FluxusGLSurfaceView extends GLSurfaceView {
-    public FluxusGLSurfaceView(Context context) {
-        super(context);
-        mRenderer = new NomadicRenderer(context);
-        mAct = context;
-        setRenderer(mRenderer);
-        mCode=mRenderer.readRawTextFile(mAct,"startup.scm");
-    }
 
-    public String readLog()
-    {
-        //create file object
-        File file = new File("/sdcard/nomadic-log.txt");
-        int ch;
-        
-        StringBuffer strContent = new StringBuffer("");
-        FileInputStream fin = null;
-        try
-        {
-            fin = new FileInputStream(file);
-            while( (ch = fin.read()) != -1)
-                strContent.append((char)ch);
-            fin.close();
-        }
-        catch(FileNotFoundException e)
-        {
-        }
-        catch(IOException ioe)
-        {
-        }
-        return strContent.toString();
-    }
 
-    public void showLog()
-    {
-        AlertDialog.Builder alert = new AlertDialog.Builder(mAct);
-        alert.setTitle("nomadic");
-        alert.setMessage("s p a t");
-        final EditText input = new EditText(mAct);
-        alert.setView(input);
-        input.setText(readLog());
-        alert.setPositiveButton("done", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int whichButton) {
-            }
-        });
-        
-        alert.setNegativeButton("out", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int whichButton) {
-            }
-        });
-        alert.show();
-    }
-    
-
-    public void doCode()
-    {
-        AlertDialog.Builder alert = new AlertDialog.Builder(mAct);
-        alert.setTitle("nomadic");
-        alert.setMessage("f e e d   m e");
-        final EditText input = new EditText(mAct);
-        alert.setView(input);
-        input.setText(mCode);
-        alert.setPositiveButton("eval", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int whichButton) {
-                mCode = input.getText().toString();
-                mRenderer.eval("(pre-process-run '("+mCode+"))");
-            }
-        });
-        
-        alert.setNegativeButton("sip", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int whichButton) {
-                showLog();
-            }
-        });
-        alert.show();
-
-     }
-
-    public boolean onTouchEvent(MotionEvent event) {
-        final int pointerCount = event.getPointerCount();
-        String code="(input-touches (list ";
-        for (int p = 0; p < pointerCount; p++) {
-            code+="(list "+event.getPointerId(p)+" "+event.getX(p)+" "+event.getY(p)+") ";
-        }
-        code+="))";
-        
-        mRenderer.eval(code);
-
-        if (event.getAction() == MotionEvent.ACTION_DOWN)
-        {        
-
-        }
-        return true;
-    }
-
-    NomadicRenderer mRenderer;
-    Context mAct;
-    String mCode;
-
-    private static native void nativePause();
-}
-
-class NomadicRenderer implements GLSurfaceView.Renderer {
-    public NomadicRenderer(Context ctx)
-    {
-        mAct=ctx;
-    }
-
-    static class Lock extends Object {}
-    static public Lock mLock = new Lock();
-    
-
-    public void onSurfaceCreated(GL10 gl, EGLConfig config) {
-        nativeInit();
-        loadTexture("test.png");
-        eval(readRawTextFile(mAct, "init.scm"));
-        eval(readRawTextFile(mAct, "boot.scm"));        
-        eval("(pre-process-run '("+readRawTextFile(mAct, "startup.scm")+"))");        
-    }
-
-    public void onSurfaceChanged(GL10 gl, int w, int h) {
-        //gl.glViewport(0, 0, w, h);
-        nativeResize(w, h);
-    }
-
-    public void onDrawFrame(GL10 gl) {
-        synchronized (mLock) 
-        {
-            nativeRender();
-        }
-    }
-
-    public void eval(String code) {
-        synchronized (mLock) 
-        {
-            nativeEval(code);
-        }
-    }
-
-    public void loadTexture(String texname) {
-        FlxImage tex=readRawImage(mAct,texname);
-        if (tex!=null)
-        {
-            synchronized (mLock) 
-            {
-                nativeLoadTexture(texname,tex.mData,tex.mWidth,tex.mHeight);
-            }
-        }
-    }
-
-    Context mAct;
-
-    private static native void nativeInit();
-    private static native void nativeResize(int w, int h);
-    private static native void nativeRender();
-    private static native void nativeDone();
-    private static native void nativeEval(String code);
-    private static native void nativeLoadTexture(String texname, byte[] arr, int w, int h);
-
-    public FlxImage readRawImage(Context ctx, String fn)
-    {
-        InputStream fis = null;
-        try
-        {
-            fis = ctx.getAssets().open(fn);
-            Bitmap bmp = BitmapFactory.decodeStream(fis);
-            ByteBuffer bb = ByteBuffer.allocate(bmp.getWidth()*bmp.getHeight()*4);
-            bmp.copyPixelsToBuffer(bb);
-            FlxImage ret=new FlxImage();
-            ret.mWidth = bmp.getWidth(); 
-            ret.mHeight = bmp.getHeight(); 
-            ret.mData = bb.array();
-            return ret;
-        }
-        catch(FileNotFoundException e)
-        {
-            AlertDialog.Builder alert = new AlertDialog.Builder(mAct);
-            alert.setTitle(e.toString());
-            alert.show();
-        }
-        catch(IOException ioe)
-        {
-            AlertDialog.Builder alert = new AlertDialog.Builder(mAct);
-            alert.setTitle(ioe.toString());
-            alert.show();
-        }
-        return null;
-    }
-
-    public static String readRawTextFile(Context ctx, String fn)
-    {
-        BufferedReader inRd=null;
-        try
-        { 
-            StringBuffer inLine = new StringBuffer();
-            inRd = 
-                new BufferedReader(new InputStreamReader
-                                   (ctx.getAssets().open(fn))); 
-            
-            String text;
-            while ((text = inRd.readLine()) != null) {
-                inLine.append(text);
-                inLine.append("\n");
-            }
-     
-            return inLine.toString();
-        }
-        catch (IOException e)
-        {
-            return "";
-        }
-        finally
-        {
-            try { inRd.close(); } 
-            catch (IOException e) { return ""; }
-        } 
-    }
-
-}

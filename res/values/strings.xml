@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">nomadic</string>
+	<string name="okbutton">super</string>
+	<string name="cancelbutton">abort</string>
 </resources>
