@@ -25,16 +25,18 @@ import android.app.AlertDialog;
 import android.graphics.BitmapFactory;
 import android.graphics.Bitmap;
 import android.util.Log;
-
+import android.os.Environment;
 import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.io.File;
 import java.io.Writer;
 import java.io.Reader;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.InputStreamReader;
 import java.io.FileInputStream;
 import java.io.ByteArrayOutputStream;
@@ -73,6 +75,11 @@ class NomadicRenderer implements GLSurfaceView.Renderer {
         evalCode(code);
     }
 
+    public void saveExternal(String filename)
+    {
+        writeRawTextFileExternal(mAct, filename, mCode);
+    }
+
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         nativeInit();
         loadTexture("test.png");
@@ -87,24 +94,28 @@ class NomadicRenderer implements GLSurfaceView.Renderer {
     }
 
     public void onDrawFrame(GL10 gl) {
-        synchronized (mLock) 
+        synchronized (mLock)
         {
             nativeRender();
         }
     }
 
-    public void evalCurrent() 
+    public void setCurrent(String code) {
+        mCode=code;
+    }
+
+    public void evalCurrent()
     {
         evalCode(mCode);
     }
 
-    public void evalCode(String code) 
+    public void evalCode(String code)
     {
         eval("(clear)(pre-process-run '("+code+"))");
     }
 
     private void eval(String code) {
-        synchronized (mLock) 
+        synchronized (mLock)
         {
             nativeEval(code);
         }
@@ -114,7 +125,7 @@ class NomadicRenderer implements GLSurfaceView.Renderer {
         FlxImage tex=readRawImage(mAct,texname);
         if (tex!=null)
         {
-            synchronized (mLock) 
+            synchronized (mLock)
             {
                 nativeLoadTexture(texname,tex.mData,tex.mWidth,tex.mHeight);
             }
@@ -140,8 +151,8 @@ class NomadicRenderer implements GLSurfaceView.Renderer {
             ByteBuffer bb = ByteBuffer.allocate(bmp.getWidth()*bmp.getHeight()*4);
             bmp.copyPixelsToBuffer(bb);
             FlxImage ret=new FlxImage();
-            ret.mWidth = bmp.getWidth(); 
-            ret.mHeight = bmp.getHeight(); 
+            ret.mWidth = bmp.getWidth();
+            ret.mHeight = bmp.getHeight();
             ret.mData = bb.array();
             return ret;
         }
@@ -161,7 +172,7 @@ class NomadicRenderer implements GLSurfaceView.Renderer {
     }
 
     public static String readRawTextFileExternal(Context ctx, String fn)
-    {    
+    {
         File f = new File(fn);
         if (f.exists()) {
             try {
@@ -183,22 +194,49 @@ class NomadicRenderer implements GLSurfaceView.Renderer {
         return "";
     }
 
+    public void writeRawTextFileExternal(Context ctx, String fn, String code)
+    {
+        try {
+            File sdCardFile = Environment.getExternalStorageDirectory();
+            if (sdCardFile.canWrite() == true) {
+//                File viewerFile = new File(sdCardFile, "Viewer");
+//                viewerFile.mkdirs();
+//                File textFile = new File(viewerFile, fn);
+                File textFile = new File(fn);
+                FileWriter fileWriter = new FileWriter(textFile);
+                BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+                try {
+                    Log.i("fluxus","writing "+code);
+                    bufferedWriter.write(code);
+                } finally {
+                    bufferedWriter.close();
+                }
+            } else {
+                Log.e("fluxus", "Cannot write to SD Card");
+            }
+        } catch (Exception e) {
+            Log.e("fluxus", "Error - " + e);
+            e.printStackTrace();
+        }
+    }
+
+
     public static String readRawTextFile(Context ctx, String fn)
     {
         BufferedReader inRd=null;
         try
-        { 
+        {
             StringBuffer inLine = new StringBuffer();
-            inRd = 
+            inRd =
                 new BufferedReader(new InputStreamReader
-                                   (ctx.getAssets().open(fn))); 
-            
+                                   (ctx.getAssets().open(fn)));
+
             String text;
             while ((text = inRd.readLine()) != null) {
                 inLine.append(text);
                 inLine.append("\n");
             }
-     
+
             return inLine.toString();
         }
         catch (IOException e)
@@ -207,9 +245,9 @@ class NomadicRenderer implements GLSurfaceView.Renderer {
         }
         finally
         {
-            try { inRd.close(); } 
+            try { inRd.close(); }
             catch (IOException e) { return ""; }
-        } 
+        }
     }
 
 }

@@ -47,6 +47,8 @@ public class Nomadic extends Activity {
 	private MenuItem menuexit = null;
 	private MenuItem menuload = null;
 	private MenuItem menuloadtex = null;
+	private MenuItem menuedit = null;
+	private MenuItem menusave = null;
     private int DIALOG_LOAD = 1;
     private int DIALOG_TEXLOAD = 2;
 
@@ -71,10 +73,10 @@ public class Nomadic extends Activity {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) { 
-        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER)
-        {        
-            mGLView.doCode();            
-        }
+//        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER)
+//        {        
+//            mGLView.doCode();            
+//        }
         return super.onKeyDown(keyCode,event);
     }
 
@@ -91,10 +93,14 @@ public class Nomadic extends Activity {
 		menuabout.setIcon(android.R.drawable.ic_menu_info_details); 
 		menuload = menu.add(0, Menu.FIRST + menu.size(), 0, "Load");
 		menuload.setIcon(android.R.drawable.ic_menu_info_details); 
-		menuloadtex = menu.add(0, Menu.FIRST + menu.size(), 0, "Load Texture");
-		menuloadtex.setIcon(android.R.drawable.ic_menu_info_details); 
+		//menuloadtex = menu.add(0, Menu.FIRST + menu.size(), 0, "Load Texture");
+		//menuloadtex.setIcon(android.R.drawable.ic_menu_info_details); 
 		menuexit = menu.add(0, Menu.FIRST + menu.size(), 0, "Exit");
 		menuexit.setIcon(android.R.drawable.ic_menu_close_clear_cancel); 
+		menuedit = menu.add(0, Menu.FIRST + menu.size(), 0, "Edit");
+		menuedit.setIcon(android.R.drawable.ic_menu_edit); 
+		menusave = menu.add(0, Menu.FIRST + menu.size(), 0, "Save");
+		menusave.setIcon(android.R.drawable.ic_menu_save); 
 		return super.onPrepareOptionsMenu(menu);
 	}
 	
@@ -137,6 +143,10 @@ public class Nomadic extends Activity {
 			startActivityForResult(it, DIALOG_TEXLOAD);            
 		} else if (item == menuexit) {
 			finish();
+		} else if (item == menuedit) {
+            mGLView.doCode();                        
+		} else if (item == menusave) {
+            mGLView.saveCodeExternal();                        
 		} else {
 			// pass the menu selection through to the MenuBang manager
 //			MenuBang.hit(item);
