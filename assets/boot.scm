@@ -159,6 +159,11 @@
                (list-ref (car l) 2))
   (set! _touches l))
 
+(define on-sensor (lambda (x y z) 0))
+
+(define (input-sensor l)
+  (on-sensor (list-ref l 0) (list-ref l 1) (list-ref l 2) ))
+
 (define (get-touch-ids)
   (map
    (lambda (touch)

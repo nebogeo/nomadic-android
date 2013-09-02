@@ -49,10 +49,18 @@ class NomadicRenderer implements GLSurfaceView.Renderer {
     static public Lock mLock = new Lock();
     static String mCode = "";
 
+    public int mSensorX;
+    public int mSensorY;
+    public int mSensorZ;
+
+
     public NomadicRenderer(Context ctx, String code)
     {
         mAct=ctx;
         mCode=code;
+        mSensorX=0;
+        mSensorY=0;
+        mSensorZ=0;
     }
 
     public String getCode() { return mCode; }
@@ -96,6 +104,7 @@ class NomadicRenderer implements GLSurfaceView.Renderer {
     public void onDrawFrame(GL10 gl) {
         synchronized (mLock)
         {
+            eval("(input-sensor (list "+mSensorX+" "+mSensorY+" "+mSensorZ+"))");
             nativeRender();
         }
     }
@@ -114,7 +123,7 @@ class NomadicRenderer implements GLSurfaceView.Renderer {
         eval("(clear)(pre-process-run '("+code+"))");
     }
 
-    private void eval(String code) {
+    public void eval(String code) {
         synchronized (mLock)
         {
             nativeEval(code);

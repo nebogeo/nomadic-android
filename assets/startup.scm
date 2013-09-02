@@ -68,10 +68,6 @@
        (cadr p)))
      (else (display "end check wrong ") (display p) (newline)))))
 
-(clear)
-(clear-colour (vector 0 0.2 0.5))
-;(define p (build-cube))
-(define jelly (build-jellyfish))
 
 (define explode
   (list
@@ -104,7 +100,7 @@
    lda  3  0           ;; 18 load accum
 
    ;; make small
-   ldl 0.05 0
+   ldl 0.1 0
    mul 0 0
 
    ldl 1 0   ;; subtract
@@ -149,17 +145,18 @@
 
 (define twirl
   (list
-   jmp 3 0
+   jmp 4 0
    0 0 0   ;; time (increases by 1 each loop)
    2 2 -3  ;; shuffle data for converting (x y z) -> (z z x)
+   200 0 0
    ;; code follows to build a vertex by rotation around an angle based on the index
    lda 1 0       ;; load current time from address 0
-   ldl 200.3 0   ;; load angle 135.3 (in degrees)
+   lda 3 0   ;; load angle 135.3 (in degrees)
    mul 0 0       ;; multiply time by angle
    _sin 0 0       ;; makes (sin(angle) cos(angle) 0)
    ;; make a spiral by scaling up with time
    lda 1 0       ;; load time again
-   ldl 0.05 0    ;; load 0.05
+   ldl 0.025 0    ;; load 0.05
    mul 0 0       ;; multiply to get time*0.05
    mul 0 0       ;; mul rotation vector by time*0.05
    ;; move backward in z so we get some depth
@@ -169,64 +166,137 @@
    lda 2 0       ;; load the shuffle vec from address 1
    shf 0 0       ;; shuffle the x to z position
    add 0 0       ;; add (0 0 x) to set z on current position
+
+   ldl 0.1 0
+   mul 0 0
+   ldi 1 reg-mdl
+   ldl 0.9 0
+   mul 0 0
+   add 0 0
    sti 1 reg-mdl ;; write position to model memory registers
    ;; increment the index by 1
    add.x 1 1
-   jmp 3 0       ;; goto 2
+   ldl (- reg-mdl-end reg-mdl) 0
+   lda 1 0
+   jgt 2 0
+   jmp 4 0       ;; goto 2
+   ldl 0 0
+   sta 1 0
+   jmp 4 0
    end-check   ))
 
+
+(define v2-test
+  (list
+   10 100 0 ;; control (pc, cycles, stack)
+   255 0 0 ;; graphics
+   0 0 0 ;; pos
+   0 0 0 ;; sensor
+
+   0 0 0 ;; space for data (4:t)
+   10 0 0 ;; 5:angle
+   2 2 -3 ;; 6:shuffle
+   0 0 0
+   0 0 0
+   0 0 0
+
+   ;; code follows to build a vertex by rotation around an angle based on the index
+   lda 4 0       ;; load current time from address 0
+   lda 5 0   ;; load angle 135.3 (in degrees)
+   mul 0 0       ;; multiply time by angle
+   _sin 0 0       ;; makes (sin(angle) cos(angle) 0)
+   ;; make a spiral by scaling up with time
+   lda 4 0       ;; load time again
+   ldl 0.025 0    ;; load 0.05
+   mul 0 0       ;; multiply to get time*0.05
+   mul 0 0       ;; mul rotation vector by time*0.05
+   ;; move backward in z so we get some depth
+   lda 4 0       ;; load the time again
+   ldl 0.03 0    ;; load 0.03
+   mul 0 0       ;; multiply the time by 0.01
+   lda 6 0       ;; load the shuffle vec from address 1
+   shf 0 0       ;; shuffle the x to z position
+   add 0 0       ;; add (0 0 x) to set z on current position
+
+   sti 4 reg-mdl ;; write position to model memory registers
+   ;; increment the index by 1
+   add.x 1 1
+   lda 1 0 ;; load graphics reg (z is size)
+   lda 1 0
+   jgt 2 0
+   jmp 10 0
+   ldl 0 0
+   sta 4 0
+   jmp 10 0
+   end-check
+   ))
+
+(clear)
+(clear-colour (vector 0 0.2 0.5))
+;(define p (build-cube))
+(define jellys (build-list (lambda (i) (build-jellyfish 1024)) 1))
+
+(for-each
+ (lambda (j)
+   (with-primitive
+    j
+    (pdata-index-map!
+     (lambda (i p)
+       (vector 0 0 0))
+     "p")
+
+    (jelly-prog 0 v2-test)
+
+    (pdata-index-map!
+     (lambda (i c)
+       (let ((ir (modulo (* i 4) (pdata-size)))
+             (ig (modulo (* i 20) (pdata-size)))
+             (ib (modulo (* i 3) (pdata-size))))
+         (vector (/ ir (pdata-size))
+                 (/ ig (pdata-size))
+                 (/ ib (pdata-size)))))
+     "c")
+    (hint-unlit)
+    (hint-wire)
+    (line-width 3)
+    (let ((p (srndvec)))
+      (translate (vector (* (vx p) 2)
+                         (* (vy p) 4)
+                         (* (vz p) 20))))))
+ jellys)
+
+
+
+(define current 0)
+(define frames 100)
+(define frame 0)
+
+(set! on-sensor
+      (lambda (x y z)
+        (with-primitive
+         (list-ref jellys current)
+         (pdata-set! "p" 3 (vmul (vector x y z) 5)))))
+
+(every-frame
+ (begin
+   (when (> frame frames)
+         (for-each
+          (lambda (j)
+            (with-primitive
+             j (pdata-set! "p" reg-ins (vector 0 0 0))))
+          jellys)
+
+         (set! current (modulo (+ current 1) (length jellys)))
+
+         (with-primitive
+          (list-ref jellys current)
+          (pdata-set! "p" reg-ins (vector 1000 0 0)))
+         (set! frame 0))
+   (set! frame (+ frame 1))))
+
+(define y (build-cube))
+
 (with-primitive
- jelly
-
- (pdata-index-map!
-  (lambda (i p)
-    (if (and (>= i reg-mdl) (< i reg-mdl-end))
-        (srndvec)
-        (vector 0 0 0)))
-  "p")
-
- (jelly-prog 20000 explode)
-
- (pdata-map!
-  (lambda (c)
-    (rndvec)) ;(vector 0.7 0.7 0.7 0.4))
-  "c")
- (hint-unlit)
- (hint-wire)
- (line-width 3))
-
-
-(with-primitive
- (build-jellyfish)
-
- (pdata-index-map!
-  (lambda (i p)
-    (if (and (>= i reg-mdl) (< i reg-mdl-end))
-        (srndvec)
-        (vector 0 0 0)))
-  "p")
-
- (jelly-prog 200 twirl)
-
- (pdata-map!
-  (lambda (c)
-    (rndvec)) ;(vector 0.7 0.7 0.7 0.4))
-  "c")
- (hint-unlit)
- (hint-wire)
- (line-width 3))
-
-
-
-(with-primitive
- jelly
-  (translate (vector -0.3 1.4 0))
- (rotate (vector -40 -20 2))
- )
-
-                                        ;(with-state
-; (rotate (vector 45 45 0))
-; (build-cube))
-
-;(every-frame
-; (with-primitive jelly (rotate (vector 2.2 2 1))))
+ y
+ (display (pdata-ref "p" 0))(newline))
+(every-frame (with-primitive y (rotate (vector 1 2 3))))

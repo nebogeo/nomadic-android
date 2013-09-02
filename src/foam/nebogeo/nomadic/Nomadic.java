@@ -32,6 +32,11 @@ import android.text.Html;
 import android.widget.TextView;
 import android.content.Intent;
 
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.FileNotFoundException;
@@ -41,7 +46,7 @@ import foam.nebogeo.nomadic.LoadDialog;
 import foam.nebogeo.nomadic.NomadicSurfaceView;
 import foam.nebogeo.nomadic.NomadicRenderer;
 
-public class Nomadic extends Activity {
+public class Nomadic extends Activity implements SensorEventListener {
 
 	private MenuItem menuabout = null;
 	private MenuItem menuexit = null;
@@ -52,11 +57,18 @@ public class Nomadic extends Activity {
     private int DIALOG_LOAD = 1;
     private int DIALOG_TEXLOAD = 2;
 
+    private SensorManager mSensorManager;
+    private Sensor mAccelerometer;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mGLView = new NomadicSurfaceView(this);
         setContentView(mGLView);
+        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        //get the accelerometer sensor
+        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
     }
 
     @Override
@@ -68,14 +80,15 @@ public class Nomadic extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_FASTEST);
         mGLView.onResume();
     }
 
     @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) { 
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
 //        if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER)
-//        {        
-//            mGLView.doCode();            
+//        {
+//            mGLView.doCode();
 //        }
         return super.onKeyDown(keyCode,event);
     }
@@ -84,26 +97,26 @@ public class Nomadic extends Activity {
 	public boolean onCreateOptionsMenu(Menu menu) {
 		return true;
 	}
-	
+
 	// menu launch yeah
 	@Override
 	public boolean onPrepareOptionsMenu(Menu menu) {
 		menu.clear();
 		menuabout = menu.add(0, Menu.FIRST + menu.size(), 0, "About");
-		menuabout.setIcon(android.R.drawable.ic_menu_info_details); 
+		menuabout.setIcon(android.R.drawable.ic_menu_info_details);
 		menuload = menu.add(0, Menu.FIRST + menu.size(), 0, "Load");
-		menuload.setIcon(android.R.drawable.ic_menu_info_details); 
+		menuload.setIcon(android.R.drawable.ic_menu_info_details);
 		//menuloadtex = menu.add(0, Menu.FIRST + menu.size(), 0, "Load Texture");
-		//menuloadtex.setIcon(android.R.drawable.ic_menu_info_details); 
+		//menuloadtex.setIcon(android.R.drawable.ic_menu_info_details);
 		menuexit = menu.add(0, Menu.FIRST + menu.size(), 0, "Exit");
-		menuexit.setIcon(android.R.drawable.ic_menu_close_clear_cancel); 
+		menuexit.setIcon(android.R.drawable.ic_menu_close_clear_cancel);
 		menuedit = menu.add(0, Menu.FIRST + menu.size(), 0, "Edit");
-		menuedit.setIcon(android.R.drawable.ic_menu_edit); 
+		menuedit.setIcon(android.R.drawable.ic_menu_edit);
 		menusave = menu.add(0, Menu.FIRST + menu.size(), 0, "Save");
-		menusave.setIcon(android.R.drawable.ic_menu_save); 
+		menusave.setIcon(android.R.drawable.ic_menu_save);
 		return super.onPrepareOptionsMenu(menu);
 	}
-	
+
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		if (item == menuabout) {
@@ -121,11 +134,11 @@ public class Nomadic extends Activity {
 			} catch (IOException e) {
 				sb.append("Copyright Dave Griffiths, 2012");
 			}
-			
+
 			// convert the string to HTML for the about dialog
 			final SpannableString s = new SpannableString(Html.fromHtml(sb.toString()));
 			Linkify.addLinks(s, Linkify.ALL);
-			
+
 			AlertDialog ab = new AlertDialog.Builder(this)
 			.setTitle("About")
 			.setIcon(android.R.drawable.ic_dialog_info)
@@ -137,16 +150,16 @@ public class Nomadic extends Activity {
 			((TextView)ab.findViewById(android.R.id.message)).setMovementMethod(LinkMovementMethod.getInstance());
 		} else if (item == menuload) {
 			Intent it = new Intent(this, LoadDialog.class);
-			startActivityForResult(it, DIALOG_LOAD);            
+			startActivityForResult(it, DIALOG_LOAD);
 		} else if (item == menuloadtex) {
 			Intent it = new Intent(this, LoadDialog.class);
-			startActivityForResult(it, DIALOG_TEXLOAD);            
+			startActivityForResult(it, DIALOG_TEXLOAD);
 		} else if (item == menuexit) {
 			finish();
 		} else if (item == menuedit) {
-            mGLView.doCode();                        
+            mGLView.doCode();
 		} else if (item == menusave) {
-            mGLView.saveCodeExternal();                        
+            mGLView.saveCodeExternal();
 		} else {
 			// pass the menu selection through to the MenuBang manager
 //			MenuBang.hit(item);
@@ -156,7 +169,7 @@ public class Nomadic extends Activity {
 
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		super.onActivityResult(requestCode, resultCode, data); 
+		super.onActivityResult(requestCode, resultCode, data);
 		if (resultCode == RESULT_OK) {
             if (requestCode == DIALOG_LOAD) {
                 mGLView.loadCodeExternal(data.getStringExtra("filename"));
@@ -164,13 +177,28 @@ public class Nomadic extends Activity {
 		}
 	}
 
+    @Override
+    public final void onAccuracyChanged(Sensor sensor, int accuracy)
+    {
+        // Do something here if sensor accuracy changes.
+    }
+
+    @Override
+    public final void onSensorChanged(SensorEvent event)
+    {
+        // Many sensors return 3 values, one for each axis.
+        int x = (int)(event.values[0]*10);
+        int y = (int)(event.values[1]*10);
+        int z = (int)(event.values[2]*10);
+
+        mGLView.updateSensor(x,y,z);
+    }
+
+
+
     private NomadicSurfaceView mGLView;
 
     static {
         System.loadLibrary("nomadic");
     }
 }
-
-
-
-

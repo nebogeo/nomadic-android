@@ -65,7 +65,7 @@ class NomadicSurfaceView extends GLSurfaceView {
         //create file object
         File file = new File("/sdcard/nomadic-log.txt");
         int ch;
-        
+
         StringBuffer strContent = new StringBuffer("");
         FileInputStream fin = null;
         try
@@ -96,14 +96,14 @@ class NomadicSurfaceView extends GLSurfaceView {
             public void onClick(DialogInterface dialog, int whichButton) {
             }
         });
-        
+
         alert.setNegativeButton("out", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
             }
         });
         alert.show();
     }
-    
+
 
     public void doCode()
     {
@@ -119,7 +119,7 @@ class NomadicSurfaceView extends GLSurfaceView {
                 mRenderer.evalCurrent();
             }
         });
-        
+
         alert.setNegativeButton("sip", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
                 showLog();
@@ -137,13 +137,19 @@ class NomadicSurfaceView extends GLSurfaceView {
         }
         code+="))";
 
-        mRenderer.evalCode(code);
+        mRenderer.eval(code);
 
         if (event.getAction() == MotionEvent.ACTION_DOWN)
-        {        
+        {
 
         }
         return true;
+    }
+
+    public void updateSensor(int x, int y, int z) {
+        mRenderer.mSensorX=x;
+        mRenderer.mSensorY=y;
+        mRenderer.mSensorZ=z;
     }
 
     public void loadCodeExternal(String filename)
