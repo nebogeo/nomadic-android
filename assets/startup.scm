@@ -48,7 +48,7 @@
 (define reg-stk 201)
 (define reg-ndt 256)
 
-(define (jelly-prog ins-per-frame l)
+(define (jelly-prog l)
   (let ((p (foldl
             (lambda (i r)
               (let ((cur (car r))
@@ -59,11 +59,10 @@
             (list '() '()) l)))
     (cond
      ((eq? (car (car p)) end-check)
-      (pdata-set! "p" reg-ins (vector ins-per-frame 0 0))
       (define addr 0)
       (for-each
        (lambda (v)
-         (pdata-set! "p" addr v)
+         (pdata-set! "x" addr v)
          (set! addr (+ addr 1)))
        (cadr p)))
      (else (display "end check wrong ") (display p) (newline)))))
@@ -188,13 +187,13 @@
 
 (define v2-test
   (list
-   10 100 0 ;; control (pc, cycles, stack)
-   255 0 0 ;; graphics
+   10 1000 0 ;; control (pc, cycles, stack)
+   512 0 0 ;; graphics
    0 0 0 ;; pos
    0 0 0 ;; sensor
 
    0 0 0 ;; space for data (4:t)
-   10 0 0 ;; 5:angle
+   100 0 0 ;; 5:angle
    2 2 -3 ;; 6:shuffle
    0 0 0
    0 0 0
@@ -218,11 +217,11 @@
    shf 0 0       ;; shuffle the x to z position
    add 0 0       ;; add (0 0 x) to set z on current position
 
-   sti 4 reg-mdl ;; write position to model memory registers
+   sti 4 512 ;; write position to model memory registers
    ;; increment the index by 1
-   add.x 1 1
+   add.x 4 1
    lda 1 0 ;; load graphics reg (z is size)
-   lda 1 0
+   lda 4 0
    jgt 2 0
    jmp 10 0
    ldl 0 0
@@ -234,7 +233,7 @@
 (clear)
 (clear-colour (vector 0 0.2 0.5))
 ;(define p (build-cube))
-(define jellys (build-list (lambda (i) (build-jellyfish 1024)) 1))
+(define jellys (build-list (lambda (i) (build-jellyfish 512)) 1))
 
 (for-each
  (lambda (j)
@@ -242,10 +241,10 @@
     j
     (pdata-index-map!
      (lambda (i p)
-       (vector 0 0 0))
+       (crndvec))
      "p")
 
-    (jelly-prog 0 v2-test)
+    (jelly-prog v2-test)
 
     (pdata-index-map!
      (lambda (i c)
@@ -259,10 +258,12 @@
     (hint-unlit)
     (hint-wire)
     (line-width 3)
-    (let ((p (srndvec)))
-      (translate (vector (* (vx p) 2)
-                         (* (vy p) 4)
-                         (* (vz p) 20))))))
+    ;(let ((p (srndvec)))
+    ;  (translate (vector (* (vx p) 2)
+    ;                     (* (vy p) 4)
+    ;                     (* (vz p) 20))))
+
+    ))
  jellys)
 
 
@@ -277,26 +278,25 @@
          (list-ref jellys current)
          (pdata-set! "p" 3 (vmul (vector x y z) 5)))))
 
-(every-frame
- (begin
-   (when (> frame frames)
-         (for-each
-          (lambda (j)
-            (with-primitive
-             j (pdata-set! "p" reg-ins (vector 0 0 0))))
-          jellys)
+;(every-frame
+; (begin
+;   (when (> frame frames)
+;         (for-each
+;          (lambda (j)
+;            (with-primitive
+;             j (pdata-set! "p" reg-ins (vector 0 0 0))))
+;          jellys)
+;
+;         (set! current (modulo (+ current 1) (length jellys)))
+;
+;         (with-primitive
+;          (list-ref jellys current)
+;          (pdata-set! "p" reg-ins (vector 1000 0 0)))
+;         (set! frame 0))
+;   (set! frame (+ frame 1))))
 
-         (set! current (modulo (+ current 1) (length jellys)))
-
-         (with-primitive
-          (list-ref jellys current)
-          (pdata-set! "p" reg-ins (vector 1000 0 0)))
-         (set! frame 0))
-   (set! frame (+ frame 1))))
-
-(define y (build-cube))
-
-(with-primitive
- y
- (display (pdata-ref "p" 0))(newline))
-(every-frame (with-primitive y (rotate (vector 1 2 3))))
+;(define y (build-cube))
+;(with-primitive
+; y
+; (display (pdata-ref "p" 0))(newline))
+;(every-frame (with-primitive y (rotate (vector 1 2 3))))
